@@ -1,6 +1,4 @@
 import json
-from typing import List, Dict, Any
-from .models import Room, Student
 from .db_connector import DatabaseConnector
 
 
@@ -15,11 +13,9 @@ class DataLoader:
         Загружает комнаты из JSON файла и создаёт таблицу rooms
         Возвращает количество загруженных записей
         """
-        # Читаем JSON файл
         with open(json_path, 'r', encoding='utf-8') as f:
-            rooms_data: List[Dict[str, Any]] = json.load(f)
+            rooms_data = json.load(f)
 
-        # Создаём таблицу rooms
         self.db.execute_query("""
             CREATE TABLE IF NOT EXISTS rooms (
                 id SERIAL PRIMARY KEY,
@@ -27,13 +23,10 @@ class DataLoader:
             )
         """)
 
-        # Очищаем таблицу rooms И все зависимые таблицы (students) через CASCADE
         self.db.execute_query("TRUNCATE TABLE rooms RESTART IDENTITY CASCADE")
 
-        # Подготавливаем данные для массовой вставки
         rooms_to_insert = [(room['id'], room['name']) for room in rooms_data]
 
-        # Вставляем данные
         self.db.execute_many(
             "INSERT INTO rooms (id, name) VALUES (%s, %s)",
             rooms_to_insert
@@ -47,11 +40,9 @@ class DataLoader:
         Загружает студентов из JSON файла и создаёт таблицу students
         Возвращает количество загруженных записей
         """
-        # Читаем JSON файл
         with open(json_path, 'r', encoding='utf-8') as f:
-            students_data: List[Dict[str, Any]] = json.load(f)
+            students_data = json.load(f)
 
-        # Создаём таблицу students
         self.db.execute_query("""
             CREATE TABLE IF NOT EXISTS students (
                 id SERIAL PRIMARY KEY,
@@ -62,23 +53,20 @@ class DataLoader:
             )
         """)
 
-        # Очищаем таблицу students (rooms уже очищены через CASCADE выше)
-        self.db.execute_query("TRUNCATE TABLE students RESTART IDENTITY")
+        # rooms очищаются через CASCADE, students очищать не нужно
+        # (зависимые записи уже удалены при очистке rooms)
 
-        # Подготавливаем данные для массовой вставки
-        # Обрезаем время из birthday (оставляем только дату)
         students_to_insert = [
             (
                 student['id'],
                 student['name'],
-                student['birthday'].split('T')[0],  # "2011-08-22T00:00:00" → "2011-08-22"
+                student['birthday'].split('T')[0],
                 student['sex'],
-                student['room']  # foreign key к rooms.id
+                student['room']
             )
             for student in students_data
         ]
 
-        # Вставляем данные
         self.db.execute_many(
             "INSERT INTO students (id, name, birthday, sex, room) VALUES (%s, %s, %s, %s, %s)",
             students_to_insert

@@ -8,6 +8,13 @@ class ResultFormatter:
     """Форматирование результатов запросов в JSON или XML"""
 
     @staticmethod
+    def _convert_value(value: Any) -> Any:
+        """Преобразует значение для сериализации"""
+        if hasattr(value, '__float__'):
+            return round(float(value), 2)
+        return value
+
+    @staticmethod
     def to_json(data: List[Tuple[Any, ...]], columns: List[str]) -> str:
         """
         Преобразует результаты запроса в JSON
@@ -16,19 +23,13 @@ class ResultFormatter:
             data: список кортежей с данными
             columns: список имён колонок
         """
-        # Преобразуем каждый кортеж в словарь
         result = []
         for row in data:
             row_dict = {}
             for i, col_name in enumerate(columns):
-                value = row[i]
-                # Преобразуем Decimal в float для JSON
-                if hasattr(value, '__float__'):
-                    value = float(value)
-                row_dict[col_name] = value
+                row_dict[col_name] = ResultFormatter._convert_value(row[i])
             result.append(row_dict)
 
-        # Сериализуем в JSON с красивым форматированием
         return json.dumps(result, indent=2, ensure_ascii=False)
 
     @staticmethod
@@ -41,31 +42,22 @@ class ResultFormatter:
             columns: список имён колонок
             root_name: имя корневого элемента
         """
-        # Создаём корневой элемент
         root = ET.Element(root_name)
 
-        # Добавляем строки
         for row in data:
             row_elem = ET.SubElement(root, "row")
             for i, col_name in enumerate(columns):
                 col_elem = ET.SubElement(row_elem, col_name)
-                value = row[i]
-                # Преобразуем Decimal в float
-                if hasattr(value, '__float__'):
-                    value = float(value)
+                value = ResultFormatter._convert_value(row[i])
                 col_elem.text = str(value)
 
-        # Преобразуем в строку с красивым форматированием
         xml_str = ET.tostring(root, encoding='unicode')
-
-        # Форматируем XML (добавляем отступы)
         dom = minidom.parseString(xml_str)
         pretty_xml = dom.toprettyxml(indent="  ")
 
-        # Удаляем лишнюю строку с XML declaration
         lines = pretty_xml.split('\n')
         if lines[0].startswith('<?xml'):
-            return '\n'.join(lines[1:])  # убираем первую строку
+            return '\n'.join(lines[1:])
         return pretty_xml
 
     @staticmethod
@@ -76,7 +68,7 @@ class ResultFormatter:
             output_format: str = 'json'
     ) -> str:
         """
-        Форматирует результаты запроса в указанный формат
+        Форматирует результаты одного запроса в указанный формат
 
         Args:
             query_name: название запроса
@@ -88,30 +80,77 @@ class ResultFormatter:
             json_data = {
                 "query": query_name,
                 "columns": columns,
-                "data": data
+                "data": [
+                    {col: ResultFormatter._convert_value(row[i])
+                     for i, col in enumerate(columns)}
+                    for row in data
+                ]
             }
-            # Преобразуем данные в формат для to_json
-            return json.dumps(json_data, indent=2, ensure_ascii=False, default=str)
+            return json.dumps(json_data, indent=2, ensure_ascii=False)
 
         elif output_format.lower() == 'xml':
             root = ET.Element("query", name=query_name)
 
-            # Добавляем колонки
             columns_elem = ET.SubElement(root, "columns")
             for col in columns:
                 ET.SubElement(columns_elem, "column").text = col
 
-            # Добавляем данные
             data_elem = ET.SubElement(root, "data")
             for row in data:
                 row_elem = ET.SubElement(data_elem, "row")
                 for i, value in enumerate(row):
                     col_elem = ET.SubElement(row_elem, columns[i])
-                    if hasattr(value, '__float__'):
-                        value = float(value)
-                    col_elem.text = str(value)
+                    col_elem.text = str(ResultFormatter._convert_value(value))
 
-            # Форматируем XML
+            xml_str = ET.tostring(root, encoding='unicode')
+            dom = minidom.parseString(xml_str)
+            return dom.toprettyxml(indent="  ")
+
+        else:
+            raise ValueError(f"Неподдерживаемый формат: {output_format}")
+
+    @staticmethod
+    def format_all_results(
+            all_results: Dict[str, Dict[str, Any]],
+            output_format: str = 'json'
+    ) -> str:
+        """
+        Форматирует все результаты запросов в указанный формат
+
+        Args:
+            all_results: словарь с результатами всех запросов
+            output_format: 'json' или 'xml'
+        """
+        if output_format.lower() == 'json':
+            json_data = {}
+            for query_name, query_data in all_results.items():
+                json_data[query_name] = {
+                    "columns": query_data['columns'],
+                    "data": [
+                        {col: ResultFormatter._convert_value(row[i])
+                         for i, col in enumerate(query_data['columns'])}
+                        for row in query_data['data']
+                    ]
+                }
+            return json.dumps(json_data, indent=2, ensure_ascii=False)
+
+        elif output_format.lower() == 'xml':
+            root = ET.Element("results")
+
+            for query_name, query_data in all_results.items():
+                query_elem = ET.SubElement(root, "query", name=query_name)
+
+                columns_elem = ET.SubElement(query_elem, "columns")
+                for col in query_data['columns']:
+                    ET.SubElement(columns_elem, "column").text = col
+
+                data_elem = ET.SubElement(query_elem, "data")
+                for row in query_data['data']:
+                    row_elem = ET.SubElement(data_elem, "row")
+                    for i, value in enumerate(row):
+                        col_elem = ET.SubElement(row_elem, query_data['columns'][i])
+                        col_elem.text = str(ResultFormatter._convert_value(value))
+
             xml_str = ET.tostring(root, encoding='unicode')
             dom = minidom.parseString(xml_str)
             return dom.toprettyxml(indent="  ")

@@ -52,7 +52,7 @@ def main():
 
     # Пути к файлам по умолчанию
     project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    rooms_file = args.rooms or os.path.join(project_dir, "data", "rooms.json")
+    rooms_file = args.rooms or os.path.join(str(project_dir), "data", "rooms.json")
     students_file = args.students or os.path.join(project_dir, "data", "students.json")
 
     # Подключаемся к БД

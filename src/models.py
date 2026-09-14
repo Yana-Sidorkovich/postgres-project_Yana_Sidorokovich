@@ -2,9 +2,8 @@ from datetime import datetime
 
 
 class Room:
-
-    def __init__(self, id: int, name: str):
-        self.id = id
+    def __init__(self, room_id: int, name: str):
+        self.id = room_id
         self.name = name
 
     def __repr__(self):
@@ -13,8 +12,8 @@ class Room:
 
 class Student:
 
-    def __init__(self, id: int, name: str, birthday: str, sex: str, room: int):
-        self.id = id
+    def __init__(self, student_id: int, name: str, birthday: str, sex: str, room: int):
+        self.id = student_id
         self.name = name
         self.birthday = birthday
         self.sex = sex
