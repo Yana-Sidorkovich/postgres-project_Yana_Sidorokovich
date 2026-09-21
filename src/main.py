@@ -6,19 +6,23 @@ from src.queries import QueryExecutor
 
 
 def main():
+    # Изменение в пути к проекту после ревью
+    project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir = os.path.join(project_dir, "data")
+
     parser = argparse.ArgumentParser(
         description='Загрузка данных и выполнение запросов к БД'
     )
     parser.add_argument(
         '--students',
         type=str,
-        default=None,
+        default=os.path.join(data_dir, "students.json"),
         help='Путь к файлу students.json'
     )
     parser.add_argument(
         '--rooms',
         type=str,
-        default=None,
+        default=os.path.join(data_dir, "rooms.json"),
         help='Путь к файлу rooms.json'
     )
     parser.add_argument(
@@ -50,12 +54,16 @@ def main():
         elif args.output.lower().endswith('.xml'):
             output_format = 'xml'
 
-    # Пути к файлам по умолчанию
-    project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    rooms_file = args.rooms or os.path.join(str(project_dir), "data", "rooms.json")
-    students_file = args.students or os.path.join(project_dir, "data", "students.json")
+    # Пути к файлам по умолчанию (прежняя версия)
+    #project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    #rooms_file = args.rooms or os.path.join(str(project_dir), "data", "rooms.json")
+    #students_file = args.students or os.path.join(project_dir, "data", "students.json")
 
-    # Подключаемся к БД
+    # Пути к файлам (теперь просто берём из args)
+    rooms_file = args.rooms
+    students_file = args.students
+
+        # Подключаемся к БД
     db = DatabaseConnector()
     if not db.connect():
         print("Не удалось подключиться к базе данных")
