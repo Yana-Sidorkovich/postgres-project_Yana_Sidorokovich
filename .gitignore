@@ -1,3 +1,24 @@
+# Виртуальное окружение
+.venv/
+venv/
+env/
+
+# Настройки PyCharm
+.idea/
+
+# Кэш Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Временные файлы ОС
+.DS_Store
+Thumbs.db
+desktop.ini
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
