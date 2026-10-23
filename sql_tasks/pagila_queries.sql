@@ -26,6 +26,41 @@ group by c.category_id, c.name
 order by total_spending desc
 limit 1;
 
+-- Исправленный запрос (СТЕ).
+WITH sums_spendings AS (
+    SELECT c.name, SUM(p.amount) AS total_spending
+    FROM category c
+    JOIN film_category fc ON c.category_id = fc.category_id
+    JOIN inventory i ON fc.film_id = i.film_id
+    JOIN rental r ON i.inventory_id = r.inventory_id
+    JOIN payment p ON r.rental_id = p.rental_id
+    GROUP BY c.category_id, c.name
+    ORDER BY total_spending DESC
+)
+SELECT *
+FROM sums_spendings
+LIMIT 1;
+
+--Вариант с DENSE_RANK() для ничьи.
+WITH sums_spendings AS (
+    SELECT c.name, SUM(p.amount) AS total_spending
+    FROM category c
+    JOIN film_category fc ON c.category_id = fc.category_id
+    JOIN inventory i ON fc.film_id = i.film_id
+    JOIN rental r ON i.inventory_id = r.inventory_id
+    JOIN payment p ON r.rental_id = p.rental_id
+    GROUP BY c.category_id, c.name
+),
+ranked AS (
+    SELECT name, total_spending,
+           DENSE_RANK() OVER (ORDER BY total_spending DESC) AS rnk
+    FROM sums_spendings
+)
+SELECT name, total_spending
+FROM ranked
+WHERE rnk = 1
+ORDER BY total_spending DESC;
+
 -- Print the names of movies that are not in the inventory.
 -- Write a query without using the IN operator.
 select f.title
@@ -34,6 +69,14 @@ where not exists (
 select 1
 from inventory i
 join rental r on i.inventory_id = r.inventory_id
+where i.film_id = f.film_id);
+
+--Исправленный вариант.
+select f.title
+from film f
+where not exists (
+select 1
+from inventory i
 where i.film_id = f.film_id);
 
 -- Output the top 3 actors who have appeared the most in movies in the “Children” category.
