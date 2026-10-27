@@ -68,15 +68,6 @@ from film f
 where not exists (
 select 1
 from inventory i
-join rental r on i.inventory_id = r.inventory_id
-where i.film_id = f.film_id);
-
---Исправленный вариант.
-select f.title
-from film f
-where not exists (
-select 1
-from inventory i
 where i.film_id = f.film_id);
 
 -- Output the top 3 actors who have appeared the most in movies in the “Children” category.
@@ -133,10 +124,14 @@ limit 1)
 
 union all
 
-(select 'has_dash' as city_type, category_name,
-ROUND(SUM(total_rental_hours))::int as total_hours
+(select 'has_dash' as city_type, category_name, total_hours
+from (
+select category_name,
+ROUND(SUM(total_rental_hours))::int as total_hours,
+DENSE_RANK() over (order by ROUND(SUM(total_rental_hours))::int DESC) as rnk
 from category_city_hours
 where city like '%-%'
 group by category_name
-order by total_hours desc
-limit 1);
+) sub
+where rnk = 1
+order by total_hours desc);
